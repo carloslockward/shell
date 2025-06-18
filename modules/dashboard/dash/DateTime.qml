@@ -63,7 +63,7 @@ Item {
         anchors.topMargin: Appearance.spacing.normal
 
         horizontalAlignment: Text.AlignHCenter
-        text: Time.format("ddd, d")
+        text: Time.format("A")
         color: Colours.palette.m3tertiary
         font.pointSize: Appearance.font.size.normal
         font.weight: 500
