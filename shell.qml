@@ -7,7 +7,7 @@ import Quickshell
 ShellRoot {
     Background {}
     Drawers {}
-    AreaPicker {}
 
+    AreaPicker {}
     Shortcuts {}
 }
