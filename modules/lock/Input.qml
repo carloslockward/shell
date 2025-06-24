@@ -79,6 +79,11 @@ ColumnLayout {
         radius: Appearance.rounding.small
         clip: true
 
+        onFocusChanged: {
+            if (!focus)
+                focus = true;
+        }
+
         Keys.onPressed: event => {
             if (pam.active)
                 return;
@@ -93,7 +98,7 @@ ColumnLayout {
                 } else {
                     root.passwordBuffer = root.passwordBuffer.slice(0, -1);
                 }
-            } else if ("abcdefghijklmnopqrstuvwxyz1234567890`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?".includes(event.text.toLowerCase())) {
+            } else if (" abcdefghijklmnopqrstuvwxyz1234567890`~!@#$%^&*()-_=+[{]}\\|;:'\",<.>/?".includes(event.text.toLowerCase())) {
                 charList.bindImWidth();
                 root.passwordBuffer += event.text;
             }
