@@ -18,6 +18,7 @@
       url = "github:caelestia-dots/cli";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.app2unit.follows = "app2unit";
+      inputs.caelestia-shell.follows = "";
     };
   };
 
@@ -41,7 +42,7 @@
           withI3 = false;
         };
         app2unit = inputs.app2unit.packages.${pkgs.system}.default;
-        caelestia-cli = inputs.caelestia-cli.packages.${pkgs.system}.default.override;
+        caelestia-cli = inputs.caelestia-cli.packages.${pkgs.system}.default;
       };
       default = caelestia-shell;
     });
