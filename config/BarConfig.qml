@@ -4,7 +4,7 @@ JsonObject {
     property bool persistent: true
     property bool showOnHover: true
     property int dragThreshold: 20
-    property list<string> externalAudioProgram: ["pavucontrol"]
+    property list<string> externalAudioProgram: ["pwvucontrol"]
     property Workspaces workspaces: Workspaces {}
     property Status status: Status {}
     property Sizes sizes: Sizes {}
