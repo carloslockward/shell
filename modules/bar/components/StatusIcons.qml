@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 
-import qs.widgets
+import qs.components
 import qs.services
 import qs.utils
 import qs.config
@@ -109,7 +109,13 @@ Item {
                 // Bluetooth icon
                 MaterialIcon {
                     animate: true
-                    text: Bluetooth.defaultAdapter?.enabled ? "bluetooth" : "bluetooth_disabled"
+                    text: {
+                        if (!Bluetooth.defaultAdapter?.enabled)
+                            return "bluetooth_disabled";
+                        if (Bluetooth.devices.values.some(d => d.connected))
+                            return "bluetooth_connected";
+                        return "bluetooth";
+                    }
                     color: root.colour
                 }
 

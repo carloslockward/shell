@@ -1,6 +1,8 @@
 pragma ComponentBehavior: Bound
 
-import qs.widgets
+import qs.components
+import qs.components.effects
+import qs.components.misc
 import qs.services
 import qs.utils
 import qs.config
@@ -9,7 +11,6 @@ import Quickshell.Widgets
 import Quickshell.Services.Mpris
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
 
@@ -157,27 +158,45 @@ Item {
 
         spacing: Appearance.spacing.small
 
-        ElideText {
+        StyledText {
             id: title
 
-            label: (Players.active?.trackTitle ?? qsTr("No media")) || qsTr("Unknown title")
-            color: Colours.palette.m3primary
+            Layout.fillWidth: true
+            Layout.maximumWidth: parent.implicitWidth
+
+            animate: true
+            horizontalAlignment: Text.AlignHCenter
+            text: (Players.active?.trackTitle ?? qsTr("No media")) || qsTr("Unknown title")
+            color: Players.active ? Colours.palette.m3primary : Colours.palette.m3onSurface
             font.pointSize: Appearance.font.size.normal
         }
 
-        ElideText {
+        StyledText {
             id: album
 
-            label: (Players.active?.trackAlbum ?? qsTr("No media")) || qsTr("Unknown album")
+            Layout.fillWidth: true
+            Layout.maximumWidth: parent.implicitWidth
+
+            animate: true
+            horizontalAlignment: Text.AlignHCenter
+            visible: !!Players.active
+            text: Players.active?.trackAlbum || qsTr("Unknown album")
             color: Colours.palette.m3outline
             font.pointSize: Appearance.font.size.small
         }
 
-        ElideText {
+        StyledText {
             id: artist
 
-            label: (Players.active?.trackArtist ?? qsTr("No media")) || qsTr("Unknown artist")
-            color: Colours.palette.m3secondary
+            Layout.fillWidth: true
+            Layout.maximumWidth: parent.implicitWidth
+
+            animate: true
+            horizontalAlignment: Text.AlignHCenter
+            text: (Players.active?.trackArtist ?? qsTr("Play some music for stuff to show up here!")) || qsTr("Unknown artist")
+            color: Players.active ? Colours.palette.m3secondary : Colours.palette.m3outline
+            elide: Text.ElideRight
+            wrapMode: Players.active ? Text.NoWrap : Text.WordWrap
         }
 
         RowLayout {
@@ -395,7 +414,7 @@ Item {
                     spacing: Appearance.spacing.small
 
                     PlayerIcon {
-                        identity: Players.active?.identity ?? ""
+                        player: Players.active
                     }
 
                     StyledText {
@@ -407,13 +426,11 @@ Item {
                     }
                 }
 
-                RectangularShadow {
+                Elevation {
                     anchors.fill: playerSelectorBg
                     radius: playerSelectorBg.radius
-                    color: Qt.alpha(Colours.palette.m3shadow, 0.7)
                     opacity: playerSelector.expanded ? 1 : 0
-                    blur: 5
-                    spread: 0
+                    level: 2
 
                     Behavior on opacity {
                         Anim {
@@ -451,6 +468,7 @@ Item {
                                 required property MprisPlayer modelData
 
                                 Layout.fillWidth: true
+                                Layout.minimumWidth: playerSelector.implicitWidth
                                 implicitWidth: playerInner.implicitWidth + Appearance.padding.normal * 2
                                 implicitHeight: playerInner.implicitHeight + Appearance.padding.smaller * 2
 
@@ -470,7 +488,7 @@ Item {
                                     spacing: Appearance.spacing.small
 
                                     PlayerIcon {
-                                        identity: player.modelData.identity
+                                        player: player.modelData
                                     }
 
                                     StyledText {
@@ -546,12 +564,12 @@ Item {
     component PlayerIcon: Loader {
         id: loader
 
-        required property string identity
-        readonly property string icon: Icons.getAppIcon(identity)
+        required property MprisPlayer player
+        readonly property string icon: Icons.getAppIcon(player?.identity)
 
         Layout.fillHeight: true
         asynchronous: true
-        sourceComponent: icon === "image://icon/" ? fallbackIcon : playerImage
+        sourceComponent: !player || icon === "image://icon/" ? fallbackIcon : playerImage
 
         Component {
             id: playerImage
@@ -566,29 +584,8 @@ Item {
             id: fallbackIcon
 
             MaterialIcon {
-                text: loader.identity ? "animated_images" : "music_off"
+                text: loader.player ? "animated_images" : "music_off"
             }
-        }
-    }
-
-    component ElideText: StyledText {
-        id: elideText
-
-        property alias label: metrics.text
-
-        Layout.fillWidth: true
-
-        animate: true
-        horizontalAlignment: Text.AlignHCenter
-        text: metrics.elidedText
-
-        TextMetrics {
-            id: metrics
-
-            font.family: elideText.font.family
-            font.pointSize: elideText.font.pointSize
-            elide: Text.ElideRight
-            elideWidth: elideText.width
         }
     }
 
