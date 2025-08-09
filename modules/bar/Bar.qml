@@ -63,7 +63,7 @@ Item {
     anchors.bottom: parent.bottom
     anchors.left: parent.left
 
-    implicitWidth: child.implicitWidth + Config.border.thickness * 2
+    implicitWidth: child.implicitWidth + Math.max(Appearance.padding.smaller, Config.border.thickness) * 2
 
     Item {
         id: child
@@ -97,8 +97,8 @@ Item {
 
             CustomMouseArea {
                 anchors.fill: parent
-                anchors.leftMargin: -Config.border.thickness
-                anchors.rightMargin: -Config.border.thickness
+                anchors.leftMargin: -Math.max(Appearance.padding.smaller, Config.border.thickness)
+                anchors.rightMargin: -Math.max(Appearance.padding.smaller, Config.border.thickness)
 
                 function onWheel(event: WheelEvent): void {
                     const activeWs = Hyprland.activeToplevel?.workspace?.name;
