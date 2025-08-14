@@ -6,4 +6,5 @@ JsonObject {
     property bool useFahrenheit: false
     property bool useTwelveHourClock: Qt.locale().timeFormat(Locale.ShortFormat).toLowerCase().includes("a")
     property real audioIncrement: 0.1
+    property bool smartScheme: true
 }
