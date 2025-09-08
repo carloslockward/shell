@@ -1,16 +1,15 @@
 #include "cachingimagemanager.hpp"
 
-#include <QCryptographicHash>
-#include <QDir>
-#include <QFile>
-#include <QFutureWatcher>
-#include <QImageReader>
-#include <QObject>
-#include <QPainter>
-#include <QThreadPool>
-#include <QtConcurrent>
-#include <QtQuick/QQuickItem>
-#include <QtQuick/QQuickWindow>
+#include <QtQuick/qquickwindow.h>
+#include <qcryptographichash.h>
+#include <qdir.h>
+#include <qfileinfo.h>
+#include <qfuturewatcher.h>
+#include <qimagereader.h>
+#include <qpainter.h>
+#include <qtconcurrentrun.h>
+
+namespace caelestia {
 
 qreal CachingImageManager::effectiveScale() const {
     if (m_item && m_item->window()) {
@@ -220,3 +219,5 @@ QString CachingImageManager::sha256sum(const QString& path) {
 
     return hash.result().toHex();
 }
+
+} // namespace caelestia
