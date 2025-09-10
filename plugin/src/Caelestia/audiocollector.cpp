@@ -2,10 +2,9 @@
 
 #include "service.hpp"
 #include <algorithm>
-#include <cstdint>
-#include <mutex>
 #include <pipewire/pipewire.h>
 #include <qdebug.h>
+#include <qmutex.h>
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/latency-utils.h>
 #include <stop_token>
@@ -25,6 +24,7 @@ PipeWireWorker::PipeWireWorker(std::stop_token token, AudioCollector* collector)
     m_loop = pw_main_loop_new(nullptr);
     if (!m_loop) {
         qWarning() << "PipeWireWorker::init: failed to create PipeWire main loop";
+        pw_deinit();
         return;
     }
 
@@ -44,7 +44,7 @@ PipeWireWorker::PipeWireWorker(std::stop_token token, AudioCollector* collector)
 
     std::vector<uint8_t> buffer(collector->chunkSize());
     spa_pod_builder b;
-    spa_pod_builder_init(&b, buffer.data(), static_cast<uint32_t>(buffer.size()));
+    spa_pod_builder_init(&b, buffer.data(), static_cast<quint32>(buffer.size()));
 
     spa_audio_info_raw info{};
     info.format = SPA_AUDIO_FORMAT_S16;
@@ -66,10 +66,17 @@ PipeWireWorker::PipeWireWorker(std::stop_token token, AudioCollector* collector)
 
     m_stream = pw_stream_new_simple(pw_main_loop_get_loop(m_loop), "caelestia-shell", props, &events, this);
 
-    pw_stream_connect(m_stream, PW_DIRECTION_INPUT, PW_ID_ANY,
+    const int success = pw_stream_connect(m_stream, PW_DIRECTION_INPUT, collector->nodeId(),
         static_cast<pw_stream_flags>(
             PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS),
         params, 1);
+    if (success < 0) {
+        qWarning() << "PipeWireWorker::init: failed to connect stream";
+        pw_stream_destroy(m_stream);
+        pw_main_loop_destroy(m_loop);
+        pw_deinit();
+        return;
+    }
 
     pw_main_loop_run(m_loop);
 
@@ -128,12 +135,12 @@ void PipeWireWorker::processStream() {
     }
 
     const spa_buffer* buf = buffer->buffer;
-    const int16_t* samples = reinterpret_cast<const int16_t*>(buf->datas[0].data);
+    const qint16* samples = reinterpret_cast<const qint16*>(buf->datas[0].data);
     if (samples == nullptr) {
         return;
     }
 
-    const uint32_t count = buf->datas[0].chunk->size / 2;
+    const quint32 count = buf->datas[0].chunk->size / 2;
     m_collector->loadChunk(samples, count);
 
     pw_stream_queue_buffer(m_stream, buffer);
@@ -155,33 +162,49 @@ unsigned int PipeWireWorker::nextPowerOf2(unsigned int n) {
     return n;
 }
 
-AudioCollector::AudioCollector(uint32_t sampleRate, uint32_t chunkSize, QObject* parent)
+AudioCollector::AudioCollector(QObject* parent)
     : Service(parent)
-    , m_buffer1(chunkSize)
-    , m_buffer2(chunkSize)
+    , m_sampleRate(44100)
+    , m_chunkSize(512)
+    , m_nodeId(PW_ID_ANY)
+    , m_buffer1(m_chunkSize)
+    , m_buffer2(m_chunkSize)
     , m_readBuffer(&m_buffer1)
-    , m_writeBuffer(&m_buffer2)
-    , m_sampleRate(sampleRate)
-    , m_chunkSize(chunkSize) {}
+    , m_writeBuffer(&m_buffer2) {}
 
 AudioCollector::~AudioCollector() {
     stop();
 }
 
-AudioCollector* AudioCollector::instance() {
-    std::lock_guard<std::mutex> lock(s_mutex);
-    if (s_instance == nullptr) {
-        s_instance = new AudioCollector();
-    }
-    return s_instance;
-}
-
-uint32_t AudioCollector::sampleRate() const {
+quint32 AudioCollector::sampleRate() const {
     return m_sampleRate;
 }
 
-uint32_t AudioCollector::chunkSize() const {
+quint32 AudioCollector::chunkSize() const {
     return m_chunkSize;
+}
+
+quint32 AudioCollector::nodeId() {
+    QMutexLocker locker(&m_nodeIdMutex);
+    return m_nodeId;
+}
+
+void AudioCollector::setNodeId(quint32 nodeId) {
+    {
+        QMutexLocker locker(&m_nodeIdMutex);
+
+        if (nodeId == m_nodeId) {
+            return;
+        }
+
+        m_nodeId = nodeId;
+    }
+    emit nodeIdChanged();
+
+    if (m_thread.joinable()) {
+        stop();
+        start();
+    }
 }
 
 void AudioCollector::clearBuffer() {
@@ -192,13 +215,13 @@ void AudioCollector::clearBuffer() {
     m_writeBuffer.store(oldRead, std::memory_order_release);
 }
 
-void AudioCollector::loadChunk(const int16_t* samples, uint32_t count) {
+void AudioCollector::loadChunk(const qint16* samples, quint32 count) {
     if (count > m_chunkSize) {
         count = m_chunkSize;
     }
 
     auto* writeBuffer = m_writeBuffer.load(std::memory_order_relaxed);
-    std::transform(samples, samples + count, writeBuffer->begin(), [](int16_t sample) {
+    std::transform(samples, samples + count, writeBuffer->begin(), [](qint16 sample) {
         return sample / 32768.0f;
     });
 
@@ -206,7 +229,7 @@ void AudioCollector::loadChunk(const int16_t* samples, uint32_t count) {
     m_writeBuffer.store(oldRead, std::memory_order_release);
 }
 
-uint32_t AudioCollector::readChunk(float* out, uint32_t count) {
+quint32 AudioCollector::readChunk(float* out, quint32 count) {
     if (count == 0 || count > m_chunkSize) {
         count = m_chunkSize;
     }
@@ -217,7 +240,7 @@ uint32_t AudioCollector::readChunk(float* out, uint32_t count) {
     return count;
 }
 
-uint32_t AudioCollector::readChunk(double* out, uint32_t count) {
+quint32 AudioCollector::readChunk(double* out, quint32 count) {
     if (count == 0 || count > m_chunkSize) {
         count = m_chunkSize;
     }
