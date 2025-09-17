@@ -83,16 +83,22 @@ QString AppDb::path() const {
 }
 
 void AppDb::setPath(const QString& path) {
-    if (m_path == path) {
+    auto newPath = path.isEmpty() ? ":memory:" : path;
+
+    if (m_path == newPath) {
         return;
     }
 
-    m_path = path;
+    m_path = newPath;
     emit pathChanged();
 
     auto db = QSqlDatabase::database(m_uuid, false);
     db.close();
-    db.setDatabaseName(path);
+    db.setDatabaseName(newPath);
+    db.open();
+
+    QSqlQuery query(db);
+    query.exec("CREATE TABLE IF NOT EXISTS frequencies (id TEXT PRIMARY KEY, frequency INTEGER)");
 
     updateAppFrequencies();
 }
@@ -189,7 +195,7 @@ void AppDb::updateApps() {
     for (auto id : m_apps.keys()) {
         if (!newIds.contains(id)) {
             dirty = true;
-            delete m_apps.take(id);
+            m_apps.take(id)->deleteLater();
         }
     }
 
