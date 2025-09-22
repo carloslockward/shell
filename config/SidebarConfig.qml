@@ -2,8 +2,7 @@ import Quickshell.Io
 
 JsonObject {
     property bool enabled: true
-    property int maxToasts: 4
-
+    property int dragThreshold: 80
     property Sizes sizes: Sizes {}
 
     component Sizes: JsonObject {

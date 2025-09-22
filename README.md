@@ -252,6 +252,36 @@ default, you must create it manually.
         "apps": {
             "terminal": ["foot"],
             "audio": ["pavucontrol"]
+        },
+        "battery": {
+            "warnLevels": [
+                {
+                    "level": 20,
+                    "title": "Low battery",
+                    "message": "You might want to plug in a charger",
+                    "icon": "battery_android_frame_2"
+                },
+                {
+                    "level": 10,
+                    "title": "Did you see the previous message?",
+                    "message": "You should probably plug in a charger <b>now</b>",
+                    "icon": "battery_android_frame_1"
+                },
+                {
+                    "level": 5,
+                    "title": "Critical battery level",
+                    "message": "PLUG THE CHARGER RIGHT NOW!!",
+                    "icon": "battery_android_alert",
+                    "critical": true
+                }
+            ],
+            "criticalLevel": 3
+        },
+        "idle": {
+            "inhibitWhenAudio": true,
+            "lockTimeout": 180,
+            "dpmsTimeout": 300,
+            "sleepTimeout": 600
         }
     },
     "background": {
@@ -510,6 +540,7 @@ default, you must create it manually.
     },
     "session": {
         "dragThreshold": 30,
+        "enabled": true,
         "vimKeybinds": false,
         "commands": {
             "logout": ["loginctl", "terminate-user", ""],
@@ -518,8 +549,13 @@ default, you must create it manually.
             "reboot": ["systemctl", "reboot"]
         }
     },
-    "utilities": {
+    "sidebar": {
+        "dragThreshold": 80,
         "enabled": true
+    },
+    "utilities": {
+        "enabled": true,
+        "maxToasts": 4
     }
 }
 ```
