@@ -7,7 +7,7 @@ JsonObject {
 
     component Apps: JsonObject {
         property list<string> terminal: ["foot"]
-        property list<string> audio: ["pavucontrol"]
+        property list<string> audio: ["pwvucontrol"]
         property list<string> playback: ["mpv"]
         property list<string> explorer: ["thunar"]
     }
@@ -16,17 +16,17 @@ JsonObject {
         property bool inhibitWhenAudio: true
         property list<var> timeouts: [
             {
-                timeout: 180,
+                timeout: 300,
                 idleAction: "lock"
             },
             {
-                timeout: 300,
+                timeout: 360,
                 idleAction: "dpms off",
                 returnAction: "dpms on"
             },
             {
-                timeout: 600,
-                idleAction: ["systemctl", "suspend-then-hibernate"]
+                timeout: 1800,
+                idleAction: ["systemctl", "suspend"]
             }
         ]
     }
