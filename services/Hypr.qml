@@ -35,10 +35,6 @@ Singleton {
 
     signal configReloaded
 
-    function message(message: string): void {
-        extras.message(message);
-    }
-
     function dispatch(request: string): void {
         Hyprland.dispatch(request);
     }
@@ -46,6 +42,12 @@ Singleton {
     function monitorFor(screen: ShellScreen): HyprlandMonitor {
         return Hyprland.monitorFor(screen);
     }
+
+    function reloadDynamicConfs(): void {
+        extras.batchMessage(["keyword bindlni ,Caps_Lock,global,caelestia:refreshDevices", "keyword bindlni ,Num_Lock,global,caelestia:refreshDevices"]);
+    }
+
+    Component.onCompleted: reloadDynamicConfs()
 
     onCapsLockChanged: {
         if (!Config.utilities.toasts.capsLockChanged)
@@ -77,7 +79,7 @@ Singleton {
 
             if (n === "configreloaded") {
                 root.configReloaded();
-                extras.message("[[BATCH]]keyword bindln ,Caps_Lock,global,caelestia:refreshDevices;keyword bindln ,Num_Lock,global,caelestia:refreshDevices");
+                root.reloadDynamicConfs();
             } else if (["workspace", "moveworkspace", "activespecial", "focusedmon"].includes(n)) {
                 Hyprland.refreshWorkspaces();
                 Hyprland.refreshMonitors();

@@ -12,6 +12,7 @@ HyprExtras::HyprExtras(QObject* parent)
     , m_requestSocket("")
     , m_eventSocket("")
     , m_socket(nullptr)
+    , m_socketValid(false)
     , m_devices(new HyprDevices(this)) {
     const auto his = qEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE");
     if (his.isEmpty()) {
@@ -32,14 +33,18 @@ HyprExtras::HyprExtras(QObject* parent)
     }
 
     m_requestSocket = hyprDir + "/.socket.sock";
-    m_eventSocket = hyprDir + "/.event.sock";
+    m_eventSocket = hyprDir + "/.socket2.sock";
 
     refreshOptions();
     refreshDevices();
 
     m_socket = new QLocalSocket(this);
+
+    QObject::connect(m_socket, &QLocalSocket::errorOccurred, this, &HyprExtras::socketError);
+    QObject::connect(m_socket, &QLocalSocket::stateChanged, this, &HyprExtras::socketStateChanged);
     QObject::connect(m_socket, &QLocalSocket::readyRead, this, &HyprExtras::readEvent);
-    m_socket->connectToServer(m_eventSocket);
+
+    m_socket->connectToServer(m_eventSocket, QLocalSocket::ReadOnly);
 }
 
 QVariantHash HyprExtras::options() const {
@@ -51,7 +56,45 @@ HyprDevices* HyprExtras::devices() const {
 }
 
 void HyprExtras::message(const QString& message) {
-    makeRequest(message, [](bool, const QByteArray&) {
+    if (message.isEmpty()) {
+        return;
+    }
+
+    makeRequest(message, [](bool success, const QByteArray& res) {
+        if (!success) {
+            qWarning() << "HyprExtras::message: request error:" << QString::fromUtf8(res);
+        }
+    });
+}
+
+void HyprExtras::batchMessage(const QStringList& messages) {
+    if (messages.isEmpty()) {
+        return;
+    }
+
+    makeRequest("[[BATCH]]" + messages.join(";"), [](bool success, const QByteArray& res) {
+        if (!success) {
+            qWarning() << "HyprExtras::batchMessage: request error:" << QString::fromUtf8(res);
+        }
+    });
+}
+
+void HyprExtras::applyOptions(const QVariantHash& options) {
+    if (options.isEmpty()) {
+        return;
+    }
+
+    QString request = "[[BATCH]]";
+    for (auto it = options.constBegin(); it != options.constEnd(); ++it) {
+        request += QString("keyword %1 %2;").arg(it.key(), it.value().toString());
+    }
+
+    makeRequest(request, [this](bool success, const QByteArray& res) {
+        if (success) {
+            refreshOptions();
+        } else {
+            qWarning() << "HyprExtras::applyOptions: request error" << QString::fromUtf8(res);
+        }
     });
 }
 
@@ -96,6 +139,22 @@ void HyprExtras::refreshDevices() {
             m_devices->updateLastIpcObject(response.object());
         }
     });
+}
+
+void HyprExtras::socketError(QLocalSocket::LocalSocketError error) const {
+    if (!m_socketValid) {
+        qWarning() << "HyprExtras::socketError: unable to connect to Hyprland event socket:" << error;
+    } else {
+        qWarning() << "HyprExtras::socketError: Hyprland event socket error:" << error;
+    }
+}
+
+void HyprExtras::socketStateChanged(QLocalSocket::LocalSocketState state) {
+    if (state == QLocalSocket::UnconnectedState && m_socketValid) {
+        qWarning() << "HyprExtras::socketStateChanged: Hyprland event socket disconnected.";
+    }
+
+    m_socketValid = state == QLocalSocket::ConnectedState;
 }
 
 void HyprExtras::readEvent() {

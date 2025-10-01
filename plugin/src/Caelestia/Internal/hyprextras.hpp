@@ -21,6 +21,8 @@ public:
     [[nodiscard]] HyprDevices* devices() const;
 
     Q_INVOKABLE void message(const QString& message);
+    Q_INVOKABLE void batchMessage(const QStringList& messages);
+    Q_INVOKABLE void applyOptions(const QVariantHash& options);
 
     Q_INVOKABLE void refreshOptions();
     Q_INVOKABLE void refreshDevices();
@@ -34,6 +36,7 @@ private:
     QString m_requestSocket;
     QString m_eventSocket;
     QLocalSocket* m_socket;
+    bool m_socketValid;
 
     QVariantHash m_options;
     HyprDevices* const m_devices;
@@ -41,6 +44,8 @@ private:
     SocketPtr m_optionsRefresh;
     SocketPtr m_devicesRefresh;
 
+    void socketError(QLocalSocket::LocalSocketError error) const;
+    void socketStateChanged(QLocalSocket::LocalSocketState state);
     void readEvent();
     void handleEvent(const QString& event);
 
